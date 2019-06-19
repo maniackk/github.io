@@ -1,0 +1,711 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+  
+    <title>arm64程序调用规则 | 吴凯凯的博客</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="吴凯凯">
+    
+
+    
+    <meta name="description" content="前言这篇主要介绍arm64程序调用规则，详细分析了程序调用过程中，参数是如何传递的。Android、iOS、Linux等基本遵循这些规则，但是各个操作系统平台也有小部分自己特定的规则。下一篇，我将介绍iOS平台的特定规则。 术语介绍   术语 意义     A32 在ARMv7架构中，使用32位固定长度指令的ARM指令集。   A64 AArch64可用时的指令集。   AAPCS64 AArch">
+<meta property="og:type" content="article">
+<meta property="og:title" content="arm64程序调用规则">
+<meta property="og:url" content="https://wukaikai.tech/2019/06/19/arm64程序调用规则/index.html">
+<meta property="og:site_name" content="吴凯凯的博客">
+<meta property="og:description" content="前言这篇主要介绍arm64程序调用规则，详细分析了程序调用过程中，参数是如何传递的。Android、iOS、Linux等基本遵循这些规则，但是各个操作系统平台也有小部分自己特定的规则。下一篇，我将介绍iOS平台的特定规则。 术语介绍   术语 意义     A32 在ARMv7架构中，使用32位固定长度指令的ARM指令集。   A64 AArch64可用时的指令集。   AAPCS64 AArch">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-06-19T09:59:58.305Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="arm64程序调用规则">
+<meta name="twitter:description" content="前言这篇主要介绍arm64程序调用规则，详细分析了程序调用过程中，参数是如何传递的。Android、iOS、Linux等基本遵循这些规则，但是各个操作系统平台也有小部分自己特定的规则。下一篇，我将介绍iOS平台的特定规则。 术语介绍   术语 意义     A32 在ARMv7架构中，使用32位固定长度指令的ARM指令集。   A64 AArch64可用时的指令集。   AAPCS64 AArch">
+
+    
+    
+    <link rel="icon" href="/img/favicon.png">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+</html>
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="吴凯凯的博客">吴凯凯的博客</a></h1>
+				<h2 class="blog-motto">记录成长</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/about">关于</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索">
+						<input type="hidden" name="q" value="site:wukaikai.tech">
+					</form>
+					
+					</li>
+				</ul>
+			</ul></nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2019/06/19/arm64程序调用规则/" title="arm64程序调用规则" itemprop="url">arm64程序调用规则</a>
+  </h1>
+  <!--
+  <p class="article-author">By
+       
+    <a href="/about" title="吴凯凯" target="_blank" itemprop="author">吴凯凯</a>
+    
+    -->
+  <p class="article-time">
+    <time datetime="2019-06-19T09:59:23.000Z" itemprop="datePublished"> 发表于 2019-06-19</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#前言"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#术语介绍"><span class="toc-number">2.</span> <span class="toc-text">术语介绍</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#数据类型和对齐"><span class="toc-number">3.</span> <span class="toc-text">数据类型和对齐</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#基本数据类型"><span class="toc-number">3.1.</span> <span class="toc-text">基本数据类型</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#程序调用规则"><span class="toc-number">4.</span> <span class="toc-text">程序调用规则</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#寄存器"><span class="toc-number">4.1.</span> <span class="toc-text">寄存器</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#进程、内存、栈"><span class="toc-number">4.2.</span> <span class="toc-text">进程、内存、栈</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#内存地址"><span class="toc-number">4.2.1.</span> <span class="toc-text">内存地址</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#栈"><span class="toc-number">4.2.2.</span> <span class="toc-text">栈</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#函数调用"><span class="toc-number">4.3.</span> <span class="toc-text">函数调用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#参数传递"><span class="toc-number">4.4.</span> <span class="toc-text">参数传递</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#可变参数"><span class="toc-number">4.4.1.</span> <span class="toc-text">可变参数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#参数传递规则"><span class="toc-number">4.4.2.</span> <span class="toc-text">参数传递规则</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#函数返回结果"><span class="toc-number">4.5.</span> <span class="toc-text">函数返回结果</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#结语"><span class="toc-number">5.</span> <span class="toc-text">结语</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#引用"><span class="toc-number">6.</span> <span class="toc-text">引用</span></a></li></ol>
+		
+		</div>
+		
+		<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>这篇主要介绍arm64程序调用规则，详细分析了程序调用过程中，参数是如何传递的。Android、iOS、Linux等基本遵循这些规则，但是各个操作系统平台也有小部分自己特定的规则。下一篇，我将介绍iOS平台的特定规则。</p>
+<h1 id="术语介绍"><a href="#术语介绍" class="headerlink" title="术语介绍"></a>术语介绍</h1><table>
+<thead>
+<tr>
+<th>术语</th>
+<th>意义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A32</td>
+<td>在ARMv7架构中，使用32位固定长度指令的ARM指令集。</td>
+</tr>
+<tr>
+<td>A64</td>
+<td>AArch64可用时的指令集。</td>
+</tr>
+<tr>
+<td>AAPCS64</td>
+<td>AArch64程序调用标准。（PCS：Procedure Call Standard）</td>
+</tr>
+<tr>
+<td>AArch32</td>
+<td>ARMv8中的32位通用寄存器，兼容ARMv7-A。</td>
+</tr>
+<tr>
+<td>AArch64</td>
+<td>ARMv8中的64位通用寄存器</td>
+</tr>
+<tr>
+<td>ABI（Application Binary Interface）</td>
+<td>汇编接口规范，跟执行环境相关，比如Linux ABI，说的是Linux环境下的汇编接口规范；</td>
+</tr>
+<tr>
+<td>ARM-based</td>
+<td>基于ARM</td>
+</tr>
+<tr>
+<td>Floating point</td>
+<td>根据上下文有这三种意思：（1）遵循IEEE 754 2008的浮点运算; （2）ARMv8浮点指令集; （3）一个被ARMv8浮点指令集和ARMv8 SIMD指令集共享的寄存器组。</td>
+</tr>
+<tr>
+<td>Q-o-I</td>
+<td>Quality of Implementation</td>
+</tr>
+<tr>
+<td>SIMD</td>
+<td>Single Instruction Multiple Data 一条指令操作多个数据</td>
+</tr>
+<tr>
+<td>T32</td>
+<td>T32使用可变16bit和32bit</td>
+</tr>
+<tr>
+<td>Routine, subroutine</td>
+<td>Routine：调用者；subroutine：被调用者</td>
+</tr>
+<tr>
+<td>Procedure</td>
+<td>没有返回值的函数</td>
+</tr>
+<tr>
+<td>Function</td>
+<td>有返回值的函数</td>
+</tr>
+<tr>
+<td>PIC, PID</td>
+<td>Position-independent code, position-independent data.</td>
+</tr>
+<tr>
+<td>Program state</td>
+<td>指程序内存和寄存器的值</td>
+</tr>
+<tr>
+<td>Caller- saved register</td>
+<td>调用者在调用函数之前，保存寄存器（一般入栈），函数返回后恢复寄存器（一般出栈）</td>
+</tr>
+<tr>
+<td>Callee-saved register</td>
+<td>被调用者（函数内部），在起始地方保存寄存器，在结束时，恢复寄存器</td>
+</tr>
+<tr>
+<td>NGRN（The Next General-purpose Register Number ）</td>
+<td>可以理解为，记录r0-r7（见下文寄存器）使用个数，参数传递前设为0，每放一个参数进入寄存器（整型寄存器），值加1。当等于8时候，说明r0-r7寄存器使用完了，再有参数，只能放入内存了。</td>
+</tr>
+<tr>
+<td>NSRN (The Next SIMD and Floating-point Register Number)</td>
+<td>同上，记录v0-v7使用个数</td>
+</tr>
+<tr>
+<td>NSAA （The next stacked argument address）</td>
+<td>记录参数放入内存，参数传递前设为SP，所以内存中参数范围应该是 sp~NSAA。详细见下文参数传递</td>
+</tr>
+</tbody>
+</table>
+<h1 id="数据类型和对齐"><a href="#数据类型和对齐" class="headerlink" title="数据类型和对齐"></a>数据类型和对齐</h1><h2 id="基本数据类型"><a href="#基本数据类型" class="headerlink" title="基本数据类型"></a>基本数据类型</h2><table><br>  <tr><br>    <th>Type Class</th><br>    <th>Machine Type</th><br>    <th>Byte<br>size</th><br>    <th>Natural<br>Alignment<br>(bytes)</th><br>  </tr><br>  <tr><br>    <td rowspan="10">Integral</td><br>    <td>Unsigned byte</td><br>    <td>1</td><br>    <td>1</td><br>  </tr><br>  <tr><br>    <td>Signed byte</td><br>    <td>1</td><br>    <td>1</td><br>  </tr><br>  <tr><br>    <td>Unsigned half-<br>word</td><br>    <td>2</td><br>    <td>2</td><br>  </tr><br>  <tr><br>    <td>Signed half-<br>word</td><br>    <td>2</td><br>    <td>2</td><br>  </tr><br>  <tr><br>    <td>Unsigned word</td><br>    <td>4</td><br>    <td>4</td><br>  </tr><br>  <tr><br>    <td>Signed word</td><br>    <td>4</td><br>    <td>4</td><br>  </tr><br>  <tr><br>    <td>Unsigned<br>double-word</td><br>    <td>8</td><br>    <td>8</td><br>  </tr><br>  <tr><br>    <td>Signed double-<br>word</td><br>    <td>8</td><br>    <td>8</td><br>  </tr><br>  <tr><br>    <td>Unsigned quad-<br>word</td><br>    <td>16</td><br>    <td>16</td><br>  </tr><br>  <tr><br>    <td>Signed quad-<br>word</td><br>    <td>16</td><br>    <td>16</td><br>  </tr><br>  <tr><br>    <td rowspan="4">Floating Point</td><br>    <td>Half precision</td><br>    <td>2</td><br>    <td>2</td><br>  </tr><br>  <tr><br>    <td>Single precision</td><br>    <td>4</td><br>    <td>4</td><br>  </tr><br>  <tr><br>    <td>Double<br>precision</td><br>    <td>8</td><br>    <td>8</td><br>  </tr><br>  <tr><br>    <td>Quad precision</td><br>    <td>16</td><br>    <td>16</td><br>  </tr><br>  <tr><br>    <td rowspan="2">Short vector</td><br>    <td>64-bit vector</td><br>    <td>8</td><br>    <td>8</td><br>  </tr><br>  <tr><br>    <td>128-bit vector</td><br>    <td>16</td><br>    <td>16</td><br>  </tr><br>  <tr><br>    <td rowspan="2">Pointer</td><br>    <td>Data pointer</td><br>    <td>8</td><br>    <td>8</td><br>  </tr><br>  <tr><br>    <td>Code pointer</td><br>    <td>8</td><br>    <td>8</td><br>  </tr><br></table>
+
+<h1 id="程序调用规则"><a href="#程序调用规则" class="headerlink" title="程序调用规则"></a>程序调用规则</h1><h2 id="寄存器"><a href="#寄存器" class="headerlink" title="寄存器"></a>寄存器</h2><p>arm64有两种寄存器：</p>
+<ol>
+<li>处理整型和指针的寄存器<ol>
+<li>通用寄存器和AAPCS64用法</li>
+</ol>
+</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>寄存器</th>
+<th>别名</th>
+<th>意义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SP</td>
+<td></td>
+<td>Stack Pointer:栈指针</td>
+</tr>
+<tr>
+<td>r30</td>
+<td>LR</td>
+<td>Link Register:在调用函数时候，保存下一条要执行指令的地址。</td>
+</tr>
+<tr>
+<td>r29</td>
+<td>FP</td>
+<td>Frame Pointer:保存函数栈的基地址。</td>
+</tr>
+<tr>
+<td>r19…r28</td>
+<td></td>
+<td>Callee-saved registers（含义见上面术语解释）</td>
+</tr>
+<tr>
+<td>r18</td>
+<td></td>
+<td>平台寄存器，有特定平台解释其用法。如果平台未把其做特殊用途，可当做临时寄存器使用。（iOS平台保留的寄存器，应用不可使用）</td>
+</tr>
+<tr>
+<td>r17</td>
+<td>IP1</td>
+<td>The second intra-procedure-call temporary register (can be used by call veneers and PLT code); at other times may be used as a temporary register.</td>
+</tr>
+<tr>
+<td>r16</td>
+<td>IP0</td>
+<td>The first intra-procedure-call scratch register (can be used by call veneers and PLT code); at other times may be used as a temporary register.</td>
+</tr>
+<tr>
+<td>r9…r15</td>
+<td></td>
+<td>临时寄存器</td>
+</tr>
+<tr>
+<td>r8</td>
+<td></td>
+<td>在一些情况下，返回值是通过r8返回的</td>
+</tr>
+<tr>
+<td>r0…r7</td>
+<td></td>
+<td>r0-r7在函数调用过程中传递参数和返回值</td>
+</tr>
+<tr>
+<td>NZCV</td>
+<td></td>
+<td>状态寄存器：N（Negative）负数 Z(Zero) 零 C(Carry) 进位 V(Overflow) 溢出</td>
+</tr>
+</tbody>
+</table>
+<p>arm64有31个通用整型寄存器，r0-r30。当使用64bits时候，命名x0-x30；使用32bits时，命名w0-w30。当寄存器在此程序调用标准中具有固定角色时，使用大写。</p>
+<ol start="2">
+<li>SIMD 和 Floating-Point寄存器</li>
+</ol>
+<p>ARM64有32个寄存器v0-v31，用于处理SIMD和浮点运算。长度不同称谓也不同，b，h，s，d，q，分别代表byte(8位)，half(16位)，single(32位)，double(64位)，quad(128位)。v0-v7在函数调用过程中传递参数和返回值；v8-v15 是Callee-saved registers（见术语解释），且是保存前64bits（更大的位数，调用者负责保存），v0-v7, v16-v31不需要保存或者调用者保存。</p>
+<h2 id="进程、内存、栈"><a href="#进程、内存、栈" class="headerlink" title="进程、内存、栈"></a>进程、内存、栈</h2><p>一个进程的内存可分为5类：</p>
+<ol>
+<li>代码区。只能被进程读，不可些。</li>
+<li>可写静态数据。</li>
+<li>只读静态数据。</li>
+<li>堆。</li>
+<li>栈。</li>
+</ol>
+<p>可写静态数据可以细分为初始化，零初始化和未初始化数据。 除了栈之外，其它4类内存不需要占用连续的内存。 进程必须具有一些代码和栈，其它3类不是必须有。<br>堆是由进程管理的内存区域， 通常用于创建动态数据对象。</p>
+<h3 id="内存地址"><a href="#内存地址" class="headerlink" title="内存地址"></a>内存地址</h3><p>地址空间包括一个或多个不相交的区域。 区域不能跨越零地址，但是可以从零开始。<br>标记寻址（tagged addressing）的使用是特定平台解释的。 当禁用标记寻址时，指针的所有64位都被传递到地址转换系统。 启用标记寻址时，为了进行地址转换，将忽略指针的前八位。注意：此tagged addressing，非iOS里的Tagged Pointer。</p>
+<h3 id="栈"><a href="#栈" class="headerlink" title="栈"></a>栈</h3><p>栈是连续的内存空间，可用于存储局部变量和参数传递（用于传递参数的寄存器不够用时候）。栈地址是从高到低，栈的地址保存在SP中。<br>栈使用限制：</p>
+<ol>
+<li>Stack-limit &lt; SP &lt;= stack-base</li>
+<li>进程只能访问这个范围内的栈空间：[SP, stack-base – 1]</li>
+<li>SP mod 16 = 0</li>
+</ol>
+<h2 id="函数调用"><a href="#函数调用" class="headerlink" title="函数调用"></a>函数调用</h2><p>A64指令集包含函数调用指令BL和BLR。<br>执行BL：PC（program counter）顺序的下一个值，也就是返回地址（函数调用完成返回要执行指令的地址），存放到LR中，将跳转地址传给PC。BLR跟BL类似，只不过PC的值是从寄存器中读取。</p>
+<h2 id="参数传递"><a href="#参数传递" class="headerlink" title="参数传递"></a>参数传递</h2><p>参数可通过r0-r7、v0-v7，栈来传递；如果参数个数不多，且参数可放进寄存器，那仅用寄存器传递参数。</p>
+<h3 id="可变参数"><a href="#可变参数" class="headerlink" title="可变参数"></a>可变参数</h3><p> 可变参数可分为命名参数（已声明的）和匿名参数（可选的参数）。<br> 当可变参数的函数，调用时候，没有可选参数时候（只有已声明的参数），调用过程和固定参数的函数一样的。</p>
+<h3 id="参数传递规则"><a href="#参数传递规则" class="headerlink" title="参数传递规则"></a>参数传递规则</h3><p> 参数传递从概念上可以分为2阶段：</p>
+<ol>
+<li>从源语言参数类型到机器类型的映射（不同源语言，映射规则不同）</li>
+<li>整理机器类型，生成最终参数列表</li>
+</ol>
+<p>参数传递过程分为3个阶段：</p>
+<ul>
+<li><p>阶段A – 初始化<br>（在开始处理参数之前，该阶段仅执行一次）</p>
+<ol>
+<li>NGRN = 0  （NGRN意义，见术语）</li>
+<li>NSRN = 0   （NSRN意义，见术语）</li>
+<li>NSAA = SP（NSAA意义，见术语）</li>
+</ol>
+</li>
+</ul>
+<ul>
+<li><p>阶段B - 预填充和扩展参数  （把参数列表中的每一个参数，去匹配下面规则，第一个被匹配到的规则，应用到该参数上。）</p>
+<ol>
+<li>如果参数类型是复合类型，调用者和被调用者都不能确定其大小，则将参数复制到内存中，并将参数替换为指向该内存的指针。 （C / C ++语言中没有这样的类型，其它语言存在。）</li>
+<li>如果参数是HFA或HVA类型，则参数不修改。</li>
+<li>如果参数是大于16个字节的复合类型，调用者申请一个内存，将参数复制到内存里去，并将参数替换为指向该内存的指针。</li>
+<li>如果参数是复合类型，则参数的大小向上舍入为最接近8个字节的倍数。（例如参数大小为9字节，修改为16字节）</li>
+</ol>
+</li>
+<li><p>阶段C- 把参数放到寄存器或栈里  （参数列表中的每个参数，将依次应用以下规则，直到参数放到寄存器或栈里，此参数处理完成，然后再从参数列表中取参数。注： 将参数分配给寄存器时，寄存器中未使用的位的值不确定。 将参数分配给栈时，未填充字节的值不确定。）</p>
+<ol>
+<li>(1)     如果参数是half(16bit)，single(16bit)，double(32bit)或quad(64bit)浮点数或Short Vector Type，并且NSRN小于8，则将参数放入寄存器v[NSRN]的最低有效位。 NSRN增加1。 此参数处理完成。</li>
+<li>(2) 如果参数是HFA(homogeneous floating-point aggregate)或HVA(homogeneous short vector aggregate)类型，且NSRN + （HFA或HVA成员个数） ≤ 8，则每个成员依次放入SIMD and Floating-point 寄存器，NSRN=NSRN+ HFA或HVA成员个数。此参数处理完成。</li>
+<li>(3) 如果参数是HFA(homogeneous floating-point aggregate)或HVA(homogeneous short vector aggregate)类型，但是NSRN已经等于8（说明v0-v7被使用完毕）。则参数的大小向上舍入为最接近8个字节的倍数。（例如参数大小为9字节，修改为16字节） </li>
+<li>(4) 如果参数是HFA(homogeneous floating-point aggregate)、HVA(homogeneous short vector aggregate)、quad(64bit)浮点数或Short Vector Type，NSAA = NSAA+max(8, 参数自然对齐大小)。</li>
+<li>(5) 如果参数是half(16bit)，single(16bit)浮点数，参数扩展到8字节（放入最低有效位，其余bits值不确定）</li>
+<li>(6) 如果参数是HFA(homogeneous floating-point aggregate)、HVA(homogeneous short vector aggregate)、half(16bit)，single(16bit)，double(32bit)或quad(64bit)浮点数或Short Vector Type，参数copy到内存，NSAA=NSAA+size（参数）。此参数处理完成。</li>
+<li>(7) 如果参数是整型或指针类型、size(参数)&lt;=8字节，且NGRN小于8，则参数复制到x[NGRN]中的最低有效位。 NGRN增加1。 此参数处理完成。</li>
+<li>(8) 如果参数对齐后16字节，NGRN向上取偶数。（例如：NGRN为2，那值保持不变；假如NGRN为3，则取4。 注：iOS ABI没有这个规则）</li>
+<li>(9) 如果参数是整型，对齐后16字节，且NGRN小于7，则把参数复制到x[NGRN] 和 x[NGRN+1]，x[NGRN]是低位。NGRN = NGRN + 2。 此参数处理完成。</li>
+<li>(10) 如果参数是复合类型，且参数可以完全放进x寄存器（8-NGRN&gt;= 参数字节大小/8）。从x[NGRN]依次放入参数（低位开始）。未填充的bits的值不确定。NGRN = NGRN + 此参数用掉的寄存器个数。此参数处理完成。</li>
+<li>(11) NGRN设为8。</li>
+<li>(12) NSAA = NSAA+max(8, 参数自然对齐大小)。</li>
+<li>(13) 如果参数是复合类型，参数copy到内存，NSAA=NSAA+size（参数）。此参数处理完成。</li>
+<li>(14) 如果参数小于8字节，参数设置为8字节大小，高位bits值不确定。</li>
+<li>(15) 参数copy到内存，NSAA=NSAA+size（参数）。此参数处理完成。</li>
+</ol>
+</li>
+</ul>
+<p>从上面规则，可以得到经验：</p>
+<ol>
+<li>处理完参数列表中所有的参数后，调用者一定知道传递参数用了多少栈空间。（NSAA - SP）</li>
+<li>浮点数和short vector types通过v寄存器和栈传递，不会通过r寄存器传递。（除非是小复合类型的成员）</li>
+<li>寄存器和栈中，参数未填充满的部分的值，不可确定。</li>
+</ol>
+<h2 id="函数返回结果"><a href="#函数返回结果" class="headerlink" title="函数返回结果"></a>函数返回结果</h2><p>函数返回方式取决于返回结果的类型。</p>
+<ol>
+<li>如果返回是类型T，如下<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">void func(T arg)</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>arg值通过寄存器（组）传递，返回的结果也是通过相同的寄存器（组）返回。</p>
+<ol start="2">
+<li>调用者申请内存（内存大小足够放入返回结果且是内存对齐的），将内存地址放入x8中传递给子函数，子函数运行时候，可以更新x8指向内存的内容，从而将结果返回。</li>
+</ol>
+<h1 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h1><p>假如文章有不对地方，欢迎大家留言指出；或者给我发邮件(<a href="mailto:wu_k_k@foxmail.com" target="_blank" rel="noopener">wu_k_k@foxmail.com</a>)。</p>
+<h1 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h1><ol>
+<li><a href="http://infocenter.arm.com/help/topic/com.arm.doc.ihi0055b/IHI0055B_aapcs64.pdf" target="_blank" rel="noopener">http://infocenter.arm.com/help/topic/com.arm.doc.ihi0055b/IHI0055B_aapcs64.pdf</a></li>
+<li><a href="https://blog.csdn.net/adaptiver/article/details/80492292" target="_blank" rel="noopener">https://blog.csdn.net/adaptiver/article/details/80492292</a></li>
+<li><a href="https://developer.apple.com/library/archive/documentation/Xcode/Conceptual/iPhoneOSABIReference/Articles/ARM64FunctionCallingConventions.html" target="_blank" rel="noopener">https://developer.apple.com/library/archive/documentation/Xcode/Conceptual/iPhoneOSABIReference/Articles/ARM64FunctionCallingConventions.html</a></li>
+</ol>
+<p>–EOF– 若无特别说明，本站文章均为原创，转载请保留链接，谢谢</p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="https://wukaikai.tech/2019/06/19/arm64程序调用规则/" data-title="arm64程序调用规则 | 吴凯凯的博客" data-tsina class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2019/05/04/关于博主/" title="关于博主">
+ <strong>下一篇：</strong><br> 
+ <span>关于博主
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<section id="comments" class="comment">
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+</section>
+
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#前言"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#术语介绍"><span class="toc-number">2.</span> <span class="toc-text">术语介绍</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#数据类型和对齐"><span class="toc-number">3.</span> <span class="toc-text">数据类型和对齐</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#基本数据类型"><span class="toc-number">3.1.</span> <span class="toc-text">基本数据类型</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#程序调用规则"><span class="toc-number">4.</span> <span class="toc-text">程序调用规则</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#寄存器"><span class="toc-number">4.1.</span> <span class="toc-text">寄存器</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#进程、内存、栈"><span class="toc-number">4.2.</span> <span class="toc-text">进程、内存、栈</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#内存地址"><span class="toc-number">4.2.1.</span> <span class="toc-text">内存地址</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#栈"><span class="toc-number">4.2.2.</span> <span class="toc-text">栈</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#函数调用"><span class="toc-number">4.3.</span> <span class="toc-text">函数调用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#参数传递"><span class="toc-number">4.4.</span> <span class="toc-text">参数传递</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#可变参数"><span class="toc-number">4.4.1.</span> <span class="toc-text">可变参数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#参数传递规则"><span class="toc-number">4.4.2.</span> <span class="toc-text">参数传递规则</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#函数返回结果"><span class="toc-number">4.5.</span> <span class="toc-text">函数返回结果</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#结语"><span class="toc-number">5.</span> <span class="toc-text">结语</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#引用"><span class="toc-number">6.</span> <span class="toc-text">引用</span></a></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+
+
+  
+
+  
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="https://liuyan.tech" target="_blank" title="小胖子">小胖子</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer">
+	
+	
+	<div class="social-font">
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2019 
+		
+		<a href="/about" target="_blank" title="吴凯凯">吴凯凯</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/jquery.qrcode-0.12.0.min.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<div class="hoverqrcode clearfix"></div>',
+  '<a class="overlay" id="qrcode"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+
+  $('.hoverqrcode').hide();
+
+  var myWidth = 0;
+  function updatehoverqrcode(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+    var qrsize = myWidth > 1024 ? 200:100;
+    var options = {render: 'image', size: qrsize, fill: '#2ca6cb', text: url, radius: 0.5, quiet: 1};
+    var p = $('.article-share-qrcode').position();
+    $('.hoverqrcode').empty().css('width', qrsize).css('height', qrsize)
+                          .css('left', p.left-qrsize/2+20).css('top', p.top-qrsize-10)
+                          .qrcode(options);
+  };
+  $(window).resize(function(){
+    $('.hoverqrcode').hide();
+  });
+  $('.article-share-qrcode').click(function(){
+    updatehoverqrcode();
+    $('.hoverqrcode').toggle();
+  });
+  $('.article-share-qrcode').hover(function(){}, function(){
+      $('.hoverqrcode').hide();
+  });
+});   
+</script>
+
+
+
+
+<script type="text/javascript">
+
+var disqus_shortname = 'wukaikai-tech';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/count.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>
