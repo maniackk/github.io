@@ -19,7 +19,7 @@
 <meta property="og:description" content="前言上篇文章介绍arm64程序调用规则，这篇介绍iOS平台上的特定规则。 iOS ABI在iOS平台上，基本是遵循上篇文章上的规则。但是也有几个不同规则。 iOS platform designers x18寄存器为平台保留，程序不可用。 wchar_t类型是32bit， long类型是64bit。 x29（FP：保存函数栈的基地址）必须总是有意义的。 空结构体，在函数调用的参数中被忽略。  iO">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://wukaikai.tech/images/empty-Struct.jpg">
-<meta property="og:updated_time" content="2019-06-20T02:37:41.274Z">
+<meta property="og:updated_time" content="2019-06-20T02:37:41.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="iOS ABI">
 <meta name="twitter:description" content="前言上篇文章介绍arm64程序调用规则，这篇介绍iOS平台上的特定规则。 iOS ABI在iOS平台上，基本是遵循上篇文章上的规则。但是也有几个不同规则。 iOS platform designers x18寄存器为平台保留，程序不可用。 wchar_t类型是32bit， long类型是64bit。 x29（FP：保存函数栈的基地址）必须总是有意义的。 空结构体，在函数调用的参数中被忽略。  iO">
@@ -237,6 +237,14 @@
 	
 <nav class="article-nav clearfix">
  
+ <div class="prev">
+ <a href="/2019/06/27/监控所有的OC方法耗时/" title="监控所有的OC方法耗时">
+  <strong>上一篇：</strong><br>
+  <span>
+  监控所有的OC方法耗时</span>
+</a>
+</div>
+
 
 <div class="next">
 <a href="/2019/05/19/arm64程序调用规则/" title="arm64程序调用规则">
