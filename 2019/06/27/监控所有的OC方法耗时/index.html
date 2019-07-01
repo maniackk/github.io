@@ -11,19 +11,19 @@
     
 
     
-    <meta name="description" content="更新计划 1.1版本：增加耗时方法排序功能和耗时方法中调用次数排序功能（已做）    1.2版本：优化代码质量和性能问题（未做）  1.3版本：增加打印卡顿时候，所有线程堆栈 （未做）  前言看了戴铭大神App 启动优化与监控 ，受益良多。我运用其中的hook objc_msgSend思想，写一个监控App里所有耗时的OC方法，以便以后开发过程中，能时刻监控App耗时性能问题。本文主要包含两方面：">
+    <meta name="description" content="更新计划 1.1版本：增加耗时方法排序功能和耗时方法中调用次数排序功能（已做）    1.2版本：优化代码质量和性能问题（未做）  1.3版本：增加打印卡顿时候，所有线程堆栈 （未做）  前言 欢迎大家关注我的掘金主页，我后面会以掘金为主；有文章先发在掘金上，然后同步到自己博客上来。  看了戴铭大神App 启动优化与监控 ，受益良多。我运用其中的hook objc_msgSend思想，写一个监控A">
 <meta property="og:type" content="article">
 <meta property="og:title" content="监控所有的OC方法耗时">
 <meta property="og:url" content="https://wukaikai.tech/2019/06/27/监控所有的OC方法耗时/index.html">
 <meta property="og:site_name" content="吴凯凯的博客">
-<meta property="og:description" content="更新计划 1.1版本：增加耗时方法排序功能和耗时方法中调用次数排序功能（已做）    1.2版本：优化代码质量和性能问题（未做）  1.3版本：增加打印卡顿时候，所有线程堆栈 （未做）  前言看了戴铭大神App 启动优化与监控 ，受益良多。我运用其中的hook objc_msgSend思想，写一个监控App里所有耗时的OC方法，以便以后开发过程中，能时刻监控App耗时性能问题。本文主要包含两方面：">
+<meta property="og:description" content="更新计划 1.1版本：增加耗时方法排序功能和耗时方法中调用次数排序功能（已做）    1.2版本：优化代码质量和性能问题（未做）  1.3版本：增加打印卡顿时候，所有线程堆栈 （未做）  前言 欢迎大家关注我的掘金主页，我后面会以掘金为主；有文章先发在掘金上，然后同步到自己博客上来。  看了戴铭大神App 启动优化与监控 ，受益良多。我运用其中的hook objc_msgSend思想，写一个监控A">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://wukaikai.tech/images/tp1_1.gif">
 <meta property="og:image" content="https://wukaikai.tech/images/TimeProfiler.png">
-<meta property="og:updated_time" content="2019-06-30T01:10:50.196Z">
+<meta property="og:updated_time" content="2019-07-01T03:07:58.575Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="监控所有的OC方法耗时">
-<meta name="twitter:description" content="更新计划 1.1版本：增加耗时方法排序功能和耗时方法中调用次数排序功能（已做）    1.2版本：优化代码质量和性能问题（未做）  1.3版本：增加打印卡顿时候，所有线程堆栈 （未做）  前言看了戴铭大神App 启动优化与监控 ，受益良多。我运用其中的hook objc_msgSend思想，写一个监控App里所有耗时的OC方法，以便以后开发过程中，能时刻监控App耗时性能问题。本文主要包含两方面：">
+<meta name="twitter:description" content="更新计划 1.1版本：增加耗时方法排序功能和耗时方法中调用次数排序功能（已做）    1.2版本：优化代码质量和性能问题（未做）  1.3版本：增加打印卡顿时候，所有线程堆栈 （未做）  前言 欢迎大家关注我的掘金主页，我后面会以掘金为主；有文章先发在掘金上，然后同步到自己博客上来。  看了戴铭大神App 启动优化与监控 ，受益良多。我运用其中的hook objc_msgSend思想，写一个监控A">
 <meta name="twitter:image" content="https://wukaikai.tech/images/tp1_1.gif">
 
     
@@ -108,7 +108,10 @@
 <li>1.2版本：优化代码质量和性能问题（未做） </li>
 <li>1.3版本：增加打印卡顿时候，所有线程堆栈 （未做）</li>
 </ol>
-<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>看了戴铭大神<a href="https://time.geekbang.org/column/article/85331" target="_blank" rel="noopener">App 启动优化与监控
+<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><blockquote>
+<p>欢迎大家关注<a href="https://juejin.im/user/5aaf755cf265da23870ea3cf" target="_blank" rel="noopener">我的掘金主页</a>，我后面会以掘金为主；有文章先发在掘金上，然后同步到自己博客上来。</p>
+</blockquote>
+<p>看了戴铭大神<a href="https://time.geekbang.org/column/article/85331" target="_blank" rel="noopener">App 启动优化与监控
 </a>，受益良多。我运用其中的hook objc_msgSend思想，写一个监控App里所有耗时的OC方法，以便以后开发过程中，能时刻监控App耗时性能问题。本文主要包含两方面：1、高性能hook objc_msgSend（我看了许多hook objc_msgSend，发现都没把性能做到极致。）；2、把耗时OC方法的调用堆栈打印出来。</p>
 <h2 id="阅读建议"><a href="#阅读建议" class="headerlink" title="阅读建议"></a>阅读建议</h2><p>如果对<a href="https://wukaikai.tech/2019/05/19/arm64%E7%A8%8B%E5%BA%8F%E8%B0%83%E7%94%A8%E8%A7%84%E5%88%99/#%E5%87%BD%E6%95%B0%E8%BF%94%E5%9B%9E%E7%BB%93%E6%9E%9C">arm64</a>和<a href="https://wukaikai.tech/2019/06/19/iOS-ABI/">iOS ABI</a>，还不是很了解，请看我前两篇文章。</p>
 <h1 id="源码"><a href="#源码" class="headerlink" title="源码"></a>源码</h1><p><a href="https://github.com/maniackk/TimeProfiler" target="_blank" rel="noopener">点击这里</a>请在github上下载。</p>

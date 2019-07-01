@@ -11,18 +11,18 @@
     
 
     
-    <meta name="description" content="前言上篇文章介绍arm64程序调用规则，这篇介绍iOS平台上的特定规则。 iOS ABI在iOS平台上，基本是遵循上篇文章上的规则。但是也有几个不同规则。 iOS platform designers x18寄存器为平台保留，程序不可用。 wchar_t类型是32bit， long类型是64bit。 x29（FP：保存函数栈的基地址）必须总是有意义的。 空结构体，在函数调用的参数中被忽略。  iO">
+    <meta name="description" content="前言 欢迎大家关注我的掘金主页，我后面会以掘金为主；有文章先发在掘金上，然后同步到自己博客上来。  上篇文章介绍arm64程序调用规则，这篇介绍iOS平台上的特定规则。 iOS ABI在iOS平台上，基本是遵循上篇文章上的规则。但是也有几个不同规则。 iOS platform designers x18寄存器为平台保留，程序不可用。 wchar_t类型是32bit， long类型是64bit。 x">
 <meta property="og:type" content="article">
 <meta property="og:title" content="iOS ABI">
 <meta property="og:url" content="https://wukaikai.tech/2019/06/19/iOS-ABI/index.html">
 <meta property="og:site_name" content="吴凯凯的博客">
-<meta property="og:description" content="前言上篇文章介绍arm64程序调用规则，这篇介绍iOS平台上的特定规则。 iOS ABI在iOS平台上，基本是遵循上篇文章上的规则。但是也有几个不同规则。 iOS platform designers x18寄存器为平台保留，程序不可用。 wchar_t类型是32bit， long类型是64bit。 x29（FP：保存函数栈的基地址）必须总是有意义的。 空结构体，在函数调用的参数中被忽略。  iO">
+<meta property="og:description" content="前言 欢迎大家关注我的掘金主页，我后面会以掘金为主；有文章先发在掘金上，然后同步到自己博客上来。  上篇文章介绍arm64程序调用规则，这篇介绍iOS平台上的特定规则。 iOS ABI在iOS平台上，基本是遵循上篇文章上的规则。但是也有几个不同规则。 iOS platform designers x18寄存器为平台保留，程序不可用。 wchar_t类型是32bit， long类型是64bit。 x">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://wukaikai.tech/images/empty-Struct.jpg">
-<meta property="og:updated_time" content="2019-06-20T02:37:41.000Z">
+<meta property="og:updated_time" content="2019-07-01T03:01:36.381Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="iOS ABI">
-<meta name="twitter:description" content="前言上篇文章介绍arm64程序调用规则，这篇介绍iOS平台上的特定规则。 iOS ABI在iOS平台上，基本是遵循上篇文章上的规则。但是也有几个不同规则。 iOS platform designers x18寄存器为平台保留，程序不可用。 wchar_t类型是32bit， long类型是64bit。 x29（FP：保存函数栈的基地址）必须总是有意义的。 空结构体，在函数调用的参数中被忽略。  iO">
+<meta name="twitter:description" content="前言 欢迎大家关注我的掘金主页，我后面会以掘金为主；有文章先发在掘金上，然后同步到自己博客上来。  上篇文章介绍arm64程序调用规则，这篇介绍iOS平台上的特定规则。 iOS ABI在iOS平台上，基本是遵循上篇文章上的规则。但是也有几个不同规则。 iOS platform designers x18寄存器为平台保留，程序不可用。 wchar_t类型是32bit， long类型是64bit。 x">
 <meta name="twitter:image" content="https://wukaikai.tech/images/empty-Struct.jpg">
 
     
@@ -99,7 +99,10 @@
 		
 		</div>
 		
-		<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p><a href="https://wukaikai.tech/2019/05/19/arm64%E7%A8%8B%E5%BA%8F%E8%B0%83%E7%94%A8%E8%A7%84%E5%88%99/" title="arm64程序调用规则">上篇文章</a>介绍arm64程序调用规则，这篇介绍iOS平台上的特定规则。</p>
+		<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><blockquote>
+<p>欢迎大家关注<a href="https://juejin.im/user/5aaf755cf265da23870ea3cf" target="_blank" rel="noopener">我的掘金主页</a>，我后面会以掘金为主；有文章先发在掘金上，然后同步到自己博客上来。</p>
+</blockquote>
+<p><a href="https://wukaikai.tech/2019/05/19/arm64%E7%A8%8B%E5%BA%8F%E8%B0%83%E7%94%A8%E8%A7%84%E5%88%99/" title="arm64程序调用规则">上篇文章</a>介绍arm64程序调用规则，这篇介绍iOS平台上的特定规则。</p>
 <h1 id="iOS-ABI"><a href="#iOS-ABI" class="headerlink" title="iOS ABI"></a>iOS ABI</h1><p>在iOS平台上，基本是遵循<a href="https://wukaikai.tech/2019/05/19/arm64%E7%A8%8B%E5%BA%8F%E8%B0%83%E7%94%A8%E8%A7%84%E5%88%99/" title="arm64程序调用规则">上篇文章</a>上的规则。但是也有几个不同规则。</p>
 <h2 id="iOS-platform-designers"><a href="#iOS-platform-designers" class="headerlink" title="iOS platform designers"></a>iOS platform designers</h2><ol>
 <li>x18寄存器为平台保留，程序不可用。</li>

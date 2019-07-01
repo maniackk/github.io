@@ -11,17 +11,17 @@
     
 
     
-    <meta name="description" content="前言这篇主要介绍arm64程序调用规则，详细分析了程序调用过程中，参数是如何传递的。Android、iOS、Linux等基本遵循这些规则，但是各个操作系统平台也有小部分自己特定的规则。下一篇，我将介绍iOS平台的特定规则。 术语介绍   术语 意义     A32 在ARMv7架构中，使用32位固定长度指令的ARM指令集。   A64 AArch64可用时的指令集。   AAPCS64 AArch">
+    <meta name="description" content="前言 欢迎大家关注我的掘金主页，我后面会以掘金为主；有文章先发在掘金上，然后同步到自己博客上来。  这篇主要介绍arm64程序调用规则，详细分析了程序调用过程中，参数是如何传递的。Android、iOS、Linux等基本遵循这些规则，但是各个操作系统平台也有小部分自己特定的规则。下一篇，我将介绍iOS平台的特定规则。 术语介绍   术语 意义     A32 在ARMv7架构中，使用32位固定长度">
 <meta property="og:type" content="article">
 <meta property="og:title" content="arm64程序调用规则">
 <meta property="og:url" content="https://wukaikai.tech/2019/05/19/arm64程序调用规则/index.html">
 <meta property="og:site_name" content="吴凯凯的博客">
-<meta property="og:description" content="前言这篇主要介绍arm64程序调用规则，详细分析了程序调用过程中，参数是如何传递的。Android、iOS、Linux等基本遵循这些规则，但是各个操作系统平台也有小部分自己特定的规则。下一篇，我将介绍iOS平台的特定规则。 术语介绍   术语 意义     A32 在ARMv7架构中，使用32位固定长度指令的ARM指令集。   A64 AArch64可用时的指令集。   AAPCS64 AArch">
+<meta property="og:description" content="前言 欢迎大家关注我的掘金主页，我后面会以掘金为主；有文章先发在掘金上，然后同步到自己博客上来。  这篇主要介绍arm64程序调用规则，详细分析了程序调用过程中，参数是如何传递的。Android、iOS、Linux等基本遵循这些规则，但是各个操作系统平台也有小部分自己特定的规则。下一篇，我将介绍iOS平台的特定规则。 术语介绍   术语 意义     A32 在ARMv7架构中，使用32位固定长度">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-06-19T11:18:02.000Z">
+<meta property="og:updated_time" content="2019-07-01T03:01:34.107Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="arm64程序调用规则">
-<meta name="twitter:description" content="前言这篇主要介绍arm64程序调用规则，详细分析了程序调用过程中，参数是如何传递的。Android、iOS、Linux等基本遵循这些规则，但是各个操作系统平台也有小部分自己特定的规则。下一篇，我将介绍iOS平台的特定规则。 术语介绍   术语 意义     A32 在ARMv7架构中，使用32位固定长度指令的ARM指令集。   A64 AArch64可用时的指令集。   AAPCS64 AArch">
+<meta name="twitter:description" content="前言 欢迎大家关注我的掘金主页，我后面会以掘金为主；有文章先发在掘金上，然后同步到自己博客上来。  这篇主要介绍arm64程序调用规则，详细分析了程序调用过程中，参数是如何传递的。Android、iOS、Linux等基本遵循这些规则，但是各个操作系统平台也有小部分自己特定的规则。下一篇，我将介绍iOS平台的特定规则。 术语介绍   术语 意义     A32 在ARMv7架构中，使用32位固定长度">
 
     
     
@@ -97,7 +97,10 @@
 		
 		</div>
 		
-		<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>这篇主要介绍arm64程序调用规则，详细分析了程序调用过程中，参数是如何传递的。Android、iOS、Linux等基本遵循这些规则，但是各个操作系统平台也有小部分自己特定的规则。<a href="https://wukaikai.tech/2019/06/19/iOS-ABI/" title="iOS ABI">下一篇</a>，我将介绍iOS平台的特定规则。</p>
+		<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><blockquote>
+<p>欢迎大家关注<a href="https://juejin.im/user/5aaf755cf265da23870ea3cf" target="_blank" rel="noopener">我的掘金主页</a>，我后面会以掘金为主；有文章先发在掘金上，然后同步到自己博客上来。</p>
+</blockquote>
+<p>这篇主要介绍arm64程序调用规则，详细分析了程序调用过程中，参数是如何传递的。Android、iOS、Linux等基本遵循这些规则，但是各个操作系统平台也有小部分自己特定的规则。<a href="https://wukaikai.tech/2019/06/19/iOS-ABI/" title="iOS ABI">下一篇</a>，我将介绍iOS平台的特定规则。</p>
 <h1 id="术语介绍"><a href="#术语介绍" class="headerlink" title="术语介绍"></a>术语介绍</h1><table>
 <thead>
 <tr>
