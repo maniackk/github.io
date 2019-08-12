@@ -11,15 +11,20 @@
     
 
     
-    <meta name="keywords" content="iOS程序员的自我修养">
+    <meta name="description" content="目录 iOS程序员的自我修养-前言（零） iOS程序员的自我修养-编译、链接过程（一） iOS程序员的自我修养-MachO文件结构分析（二） iOS程序员的自我修养-MachO文件静态链接（三） iOS程序员的自我修养-MachO文件动态链接（四） iOS程序员的自我修养-fishhook原理（五）  被隐藏了的过程OC是用Clang/LLVM来编译的。接下来我将用clang来展开整个过程。mai">
+<meta name="keywords" content="iOS程序员的自我修养">
 <meta property="og:type" content="article">
 <meta property="og:title" content="iOS程序员的自我修养-编译、链接过程（一）">
 <meta property="og:url" content="https://wukaikai.tech/2019/08/12/iOS程序员的自我修养-编译、链接过程（一）/index.html">
 <meta property="og:site_name" content="吴凯凯的博客">
+<meta property="og:description" content="目录 iOS程序员的自我修养-前言（零） iOS程序员的自我修养-编译、链接过程（一） iOS程序员的自我修养-MachO文件结构分析（二） iOS程序员的自我修养-MachO文件静态链接（三） iOS程序员的自我修养-MachO文件动态链接（四） iOS程序员的自我修养-fishhook原理（五）  被隐藏了的过程OC是用Clang/LLVM来编译的。接下来我将用clang来展开整个过程。mai">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-08-12T11:30:43.236Z">
+<meta property="og:image" content="https://wukaikai.tech/images/yuchulibianyihuibianlianjie.jpg">
+<meta property="og:updated_time" content="2019-08-12T11:50:01.264Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="iOS程序员的自我修养-编译、链接过程（一）">
+<meta name="twitter:description" content="目录 iOS程序员的自我修养-前言（零） iOS程序员的自我修养-编译、链接过程（一） iOS程序员的自我修养-MachO文件结构分析（二） iOS程序员的自我修养-MachO文件静态链接（三） iOS程序员的自我修养-MachO文件动态链接（四） iOS程序员的自我修养-fishhook原理（五）  被隐藏了的过程OC是用Clang/LLVM来编译的。接下来我将用clang来展开整个过程。mai">
+<meta name="twitter:image" content="https://wukaikai.tech/images/yuchulibianyihuibianlianjie.jpg">
 
     
     
@@ -91,11 +96,45 @@
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
 		
-			
+			<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#目录"><span class="toc-number">1.</span> <span class="toc-text">目录</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#被隐藏了的过程"><span class="toc-number">2.</span> <span class="toc-text">被隐藏了的过程</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#预处理（预编译Prepressing）"><span class="toc-number">3.</span> <span class="toc-text">预处理（预编译Prepressing）</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#编译（Compilation）"><span class="toc-number">4.</span> <span class="toc-text">编译（Compilation）</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#汇编（Assembly）"><span class="toc-number">5.</span> <span class="toc-text">汇编（Assembly）</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#链接（Linking）"><span class="toc-number">6.</span> <span class="toc-text">链接（Linking）</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#引用"><span class="toc-number">7.</span> <span class="toc-text">引用</span></a></li></ol>
 		
 		</div>
 		
-		  
+		<h1 id="目录"><a href="#目录" class="headerlink" title="目录"></a>目录</h1><ul>
+<li><a href="https://wukaikai.tech/2019/08/12/iOS%E7%A8%8B%E5%BA%8F%E5%91%98%E7%9A%84%E8%87%AA%E6%88%91%E4%BF%AE%E5%85%BB-%E5%89%8D%E8%A8%80%EF%BC%88%E9%9B%B6%EF%BC%89/">iOS程序员的自我修养-前言（零）</a></li>
+<li><a href="https://wukaikai.tech/2019/08/12/iOS%E7%A8%8B%E5%BA%8F%E5%91%98%E7%9A%84%E8%87%AA%E6%88%91%E4%BF%AE%E5%85%BB-%E7%BC%96%E8%AF%91%E3%80%81%E9%93%BE%E6%8E%A5%E8%BF%87%E7%A8%8B%EF%BC%88%E4%B8%80%EF%BC%89/">iOS程序员的自我修养-编译、链接过程（一）</a></li>
+<li><a href="https://wukaikai.tech/2019/08/12/iOS%E7%A8%8B%E5%BA%8F%E5%91%98%E7%9A%84%E8%87%AA%E6%88%91%E4%BF%AE%E5%85%BB-MachO%E6%96%87%E4%BB%B6%E7%BB%93%E6%9E%84%E5%88%86%E6%9E%90%EF%BC%88%E4%BA%8C%EF%BC%89/">iOS程序员的自我修养-MachO文件结构分析（二）</a></li>
+<li><a href="https://wukaikai.tech/2019/08/12/iOS%E7%A8%8B%E5%BA%8F%E5%91%98%E7%9A%84%E8%87%AA%E6%88%91%E4%BF%AE%E5%85%BB-MachO%E6%96%87%E4%BB%B6%E9%9D%99%E6%80%81%E9%93%BE%E6%8E%A5%EF%BC%88%E4%B8%89%EF%BC%89/">iOS程序员的自我修养-MachO文件静态链接（三）</a></li>
+<li><a href="https://wukaikai.tech/2019/08/12/iOS%E7%A8%8B%E5%BA%8F%E5%91%98%E7%9A%84%E8%87%AA%E6%88%91%E4%BF%AE%E5%85%BB-MachO%E6%96%87%E4%BB%B6%E5%8A%A8%E6%80%81%E9%93%BE%E6%8E%A5%EF%BC%88%E5%9B%9B%EF%BC%89/">iOS程序员的自我修养-MachO文件动态链接（四）</a></li>
+<li><a href="https://wukaikai.tech/2019/08/12/iOS%E7%A8%8B%E5%BA%8F%E5%91%98%E7%9A%84%E8%87%AA%E6%88%91%E4%BF%AE%E5%85%BB-fishhook%E5%8E%9F%E7%90%86%EF%BC%88%E4%BA%94%EF%BC%89/">iOS程序员的自我修养-fishhook原理（五）</a></li>
+</ul>
+<h1 id="被隐藏了的过程"><a href="#被隐藏了的过程" class="headerlink" title="被隐藏了的过程"></a>被隐藏了的过程</h1><p>OC是用Clang/LLVM来编译的。接下来我将用clang来展开整个过程。main.m文件源码如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">//main.m文件</span><br><span class="line">#import &lt;stdio.h&gt;</span><br><span class="line"></span><br><span class="line">int main(int argc, const char * argv[]) &#123;</span><br><span class="line">    printf(&quot;hello ~&quot;);</span><br><span class="line">    return 0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>平时用Xcode去Build，一键从源码到程序。这个过程中隐藏了预处理、编译、汇编和链接4个过程如下：<br><img src="/images/yuchulibianyihuibianlianjie.jpg" width="50%" height="50%"></p>
+<h1 id="预处理（预编译Prepressing）"><a href="#预处理（预编译Prepressing）" class="headerlink" title="预处理（预编译Prepressing）"></a>预处理（预编译Prepressing）</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">clang -E main.m -o main.i</span><br></pre></td></tr></table></figure>
+<p>处理源代码文件中的以”#”开头的预编译指令。规则如下：</p>
+<ol>
+<li>“#define”删除并展开对应宏定义。</li>
+<li>处理所有的条件预编译指令。如#if/#ifdef/#else/#endif。</li>
+<li>“#include/#import”包含的文件递归插入到此处。</li>
+<li>删除所有的注释”//或/**/“。</li>
+<li>添加行号和文件名标识。如“# 1 “main.m””,编译调试会用到。</li>
+</ol>
+<h1 id="编译（Compilation）"><a href="#编译（Compilation）" class="headerlink" title="编译（Compilation）"></a>编译（Compilation）</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">clang -S main.i -o main.s</span><br></pre></td></tr></table></figure>
+<p>编译就是把上面得到的.i文件进行：词法分析、语法分析、静态分析、优化生成相应的汇编代码，得到.s文件。</p>
+<ol>
+<li>词法分析：源代码的字符序列分割成一个个token（关键字、标识符、字面量、特殊符号），比如把标识符放到符号表（静态链接那篇，重点讲符号表）。</li>
+<li>语法分析：生成抽象语法树 AST，此时运算符号的优先级确定了；有些符号具有多重含义也确定了，比如“*”是乘号还是对指针取内容；表达式不合法、括号不匹配等，都会报错。</li>
+<li>静态分析：分析类型声明和匹配问题。比如整型和字符串相加，肯定会报错。</li>
+<li>中间语言生成：CodeGen根据AST自顶向下遍历逐步翻译成 LLVM IR，并且在编译期就可以确定的表达式进行优化，比如代码里t1=2+6，可以优化t1=8。（假如开启了bitcode，）</li>
+<li>目标代码生成与优化：根据中间语言生成依赖具体机器的汇编语言。并优化汇编语言。这个过程中，假如有变量且定义在同一个编译单元里，那给这个变量分配空间，确定变量的地址。假如变量或者函数不定义在这个编译单元，得链接时候，才能确定地址。</li>
+</ol>
+<h1 id="汇编（Assembly）"><a href="#汇编（Assembly）" class="headerlink" title="汇编（Assembly）"></a>汇编（Assembly）</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">clang -c main.s -o main.o</span><br></pre></td></tr></table></figure>
+<p>汇编就是把上面得到的.s文件里的汇编指令一一翻译成机器指令。得到.o文件，也就是目标文件，后面会重点讲的Mach-O文件。</p>
+<h1 id="链接（Linking）"><a href="#链接（Linking）" class="headerlink" title="链接（Linking）"></a>链接（Linking）</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">clang main.o -o main</span><br></pre></td></tr></table></figure>
+<p>远古时代，一个程序只有一个源代码文件，导致程序的维护非常困难。现在程序都是分模块组成，比如一个App，对应有多个源代码文件。每个源代码文件汇编成目标文件，根据上面流程A目标文件访问B目标文件的函数或者变量，是不知道地址的，链接就是要解决这个问题。链接过程主要包括地址和空间分配、符号决议和重定位。</p>
+<p>链接就是把目标文件（一个或多个）和需要的库（静态库/动态库）链接成可执行文件。后面会分别讲静态链接和动态链接。</p>
+<h1 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h1><p>《程序员的自我修养-链接、装载与库》</p>
+  
 	</div>
 		<footer class="article-footer clearfix">
 <div class="article-catetags">
@@ -154,7 +193,7 @@
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
  
- 
+ <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#目录"><span class="toc-number">1.</span> <span class="toc-text">目录</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#被隐藏了的过程"><span class="toc-number">2.</span> <span class="toc-text">被隐藏了的过程</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#预处理（预编译Prepressing）"><span class="toc-number">3.</span> <span class="toc-text">预处理（预编译Prepressing）</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#编译（Compilation）"><span class="toc-number">4.</span> <span class="toc-text">编译（Compilation）</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#汇编（Assembly）"><span class="toc-number">5.</span> <span class="toc-text">汇编（Assembly）</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#链接（Linking）"><span class="toc-number">6.</span> <span class="toc-text">链接（Linking）</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#引用"><span class="toc-number">7.</span> <span class="toc-text">引用</span></a></li></ol>
  
   </div>
 
@@ -173,7 +212,7 @@
 		<ul class="clearfix">
 		
 			
-				<li><a href="/tags/iOS程序员的自我修养/" title="iOS程序员的自我修养">iOS程序员的自我修养<sup>1</sup></a></li>
+				<li><a href="/tags/iOS程序员的自我修养/" title="iOS程序员的自我修养">iOS程序员的自我修养<sup>2</sup></a></li>
 			
 		
 		</ul>
