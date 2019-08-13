@@ -19,7 +19,7 @@
 <meta property="og:site_name" content="吴凯凯的博客">
 <meta property="og:description" content="目录 iOS程序员的自我修养-前言（零） iOS程序员的自我修养-编译、链接过程（一） iOS程序员的自我修养-MachO文件结构分析（二） iOS程序员的自我修养-MachO文件静态链接（三） iOS程序员的自我修养-MachO文件动态链接（四） iOS程序员的自我修养-fishhook原理（五）  写这系列博客原因我们iOS开发者，大部分都是做业务上的开发。平时可能接触到编译链接方面的知识很少">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-08-12T11:34:29.279Z">
+<meta property="og:updated_time" content="2019-08-13T01:34:34.903Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="iOS程序员的自我修养-前言（零）">
 <meta name="twitter:description" content="目录 iOS程序员的自我修养-前言（零） iOS程序员的自我修养-编译、链接过程（一） iOS程序员的自我修养-MachO文件结构分析（二） iOS程序员的自我修养-MachO文件静态链接（三） iOS程序员的自我修养-MachO文件动态链接（四） iOS程序员的自我修养-fishhook原理（五）  写这系列博客原因我们iOS开发者，大部分都是做业务上的开发。平时可能接触到编译链接方面的知识很少">
@@ -110,6 +110,7 @@
 <p>比如平时用Xcode build过程有什么错误，我们可以选择站在原理层面去分析哪里出现问题了，而不是靠不停debug来解决；再比如<a href="https://github.com/facebook/fishhook" target="_blank" rel="noopener">fishhook</a>开源库大家都知道，很多人都用过，但是大部分人不知道其原理，或者说尝试过阅读其代码，生涩难懂，其实要是知道Mach-O文件格式、静态链接、动态链接，fishhook源码真的很简单。</p>
 <h1 id="为什么起名“iOS程序员的自我修养”"><a href="#为什么起名“iOS程序员的自我修养”" class="headerlink" title="为什么起名“iOS程序员的自我修养”"></a>为什么起名“iOS程序员的自我修养”</h1><p>链接编译方面，有一本书<a href="https://item.jd.com/10067200.html" target="_blank" rel="noopener">《程序员的自我修养：链接、装载与库》</a>（推荐大家看一下，写得非常好），不过这本书是基于Linux的ELF来写的。我自己看完了这本书，消化理解后。我选择了编译链接这一小部分知识，基于iOS的可执行文件Mach-O文件来分析，写了这系列博客。（暂时想到写这5个小主题，今后可能也会写这方面知识的其它主题博客）</p>
 <p>所以我也蹭下这本书的知名度，起名为“iOS程序员的自我修养”。</p>
+<p>–EOF– 若无特别说明，本站文章均为原创，转载请保留链接，谢谢</p>
   
 	</div>
 		<footer class="article-footer clearfix">
@@ -188,7 +189,7 @@
 		<ul class="clearfix">
 		
 			
-				<li><a href="/tags/iOS程序员的自我修养/" title="iOS程序员的自我修养">iOS程序员的自我修养<sup>2</sup></a></li>
+				<li><a href="/tags/iOS程序员的自我修养/" title="iOS程序员的自我修养">iOS程序员的自我修养<sup>6</sup></a></li>
 			
 		
 		</ul>
