@@ -1,0 +1,481 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+  
+    <title>iOS线程数量监控工具 | 吴凯凯的博客</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="吴凯凯">
+    
+
+    
+    <meta name="description" content="简单却强大的线程监控工具 KKThreadMonitor ：当线程过多或瞬间创建大量子线程(线程爆炸)，控制台就打印出所有的线程堆栈。便于分析造成子线程过多或线程爆炸的原因。1234567891011121314151617181920212223242526272829303132333435363738/******* 线程爆炸，控制台打印如下： ********/🔥💥💥💥💥💥一秒">
+<meta property="og:type" content="article">
+<meta property="og:title" content="iOS线程数量监控工具">
+<meta property="og:url" content="https://wukaikai.tech/2020/04/13/iOS线程数量监控工具/index.html">
+<meta property="og:site_name" content="吴凯凯的博客">
+<meta property="og:description" content="简单却强大的线程监控工具 KKThreadMonitor ：当线程过多或瞬间创建大量子线程(线程爆炸)，控制台就打印出所有的线程堆栈。便于分析造成子线程过多或线程爆炸的原因。1234567891011121314151617181920212223242526272829303132333435363738/******* 线程爆炸，控制台打印如下： ********/🔥💥💥💥💥💥一秒">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-04-13T02:35:32.617Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="iOS线程数量监控工具">
+<meta name="twitter:description" content="简单却强大的线程监控工具 KKThreadMonitor ：当线程过多或瞬间创建大量子线程(线程爆炸)，控制台就打印出所有的线程堆栈。便于分析造成子线程过多或线程爆炸的原因。1234567891011121314151617181920212223242526272829303132333435363738/******* 线程爆炸，控制台打印如下： ********/🔥💥💥💥💥💥一秒">
+
+    
+    
+    <link rel="icon" href="/img/favicon.png">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+</html>
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="吴凯凯的博客">吴凯凯的博客</a></h1>
+				<h2 class="blog-motto">记录成长</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/about">关于</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索">
+						<input type="hidden" name="q" value="site:wukaikai.tech">
+					</form>
+					
+					</li>
+				</ul>
+			</ul></nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2020/04/13/iOS线程数量监控工具/" title="iOS线程数量监控工具" itemprop="url">iOS线程数量监控工具</a>
+  </h1>
+  <!--
+  <p class="article-author">By
+       
+    <a href="/about" title="吴凯凯" target="_blank" itemprop="author">吴凯凯</a>
+    
+    -->
+  <p class="article-time">
+    <time datetime="2020-04-13T02:34:55.000Z" itemprop="datePublished"> 发表于 2020-04-13</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#开发起因"><span class="toc-number">1.</span> <span class="toc-text">开发起因</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#不合理创建-使用线程造成的问题"><span class="toc-number">2.</span> <span class="toc-text">不合理创建/使用线程造成的问题</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#核心逻辑"><span class="toc-number">3.</span> <span class="toc-text">核心逻辑</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#如何获取线程数量"><span class="toc-number">3.1.</span> <span class="toc-text">如何获取线程数量</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#用锁保证线程安全"><span class="toc-number">3.2.</span> <span class="toc-text">用锁保证线程安全</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#通过线程状态改变，来改变线程数量"><span class="toc-number">3.3.</span> <span class="toc-text">通过线程状态改变，来改变线程数量</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#打印所有线程堆栈"><span class="toc-number">4.</span> <span class="toc-text">打印所有线程堆栈</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#参考"><span class="toc-number">5.</span> <span class="toc-text">参考</span></a></li></ol>
+		
+		</div>
+		
+		<p>简单却强大的线程监控工具 <a href="https://github.com/maniackk/KKThreadMonitor" target="_blank" rel="noopener">KKThreadMonitor</a> ：当线程过多或瞬间创建大量子线程(线程爆炸)，控制台就打印出所有的线程堆栈。便于分析造成子线程过多或线程爆炸的原因。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">/******* 线程爆炸，控制台打印如下： ********/</span><br><span class="line"></span><br><span class="line">🔥💥💥💥💥💥一秒钟开启 28 条线程！💥💥💥💥💥🔥</span><br><span class="line">👇👇👇👇👇👇👇堆栈👇👇👇👇👇👇👇</span><br><span class="line">2020-04-12 12:36:29.270755+0800 BaiduIphoneVideo[55732:6928996] </span><br><span class="line">当前线程数量：43</span><br><span class="line">callStack of thread: 9219</span><br><span class="line">libsystem_kernel.dylib         0x18022cc38 semaphore_wait_trap  +  8</span><br><span class="line">libdispatch.dylib              0x00003928 _dispatch_sema4_wait  +  28</span><br><span class="line">BaiduIphoneVideo               0x101285be0 -[TDXXXX脱敏🤣处理（去掉真实类名）XXXXager sendRequestWithBody:withURL:flag:]  +  440</span><br><span class="line">BaiduIphoneVideo               0x10128535c __29-[TDAXXXX脱敏🤣处理（去掉真实类名）XXXXnager sendMessage]_block_invoke  +  804</span><br><span class="line">libdispatch.dylib              0x00001dfc _dispatch_call_block_and_release  +  32</span><br><span class="line"></span><br><span class="line">... //省略中间线程堆栈</span><br><span class="line"></span><br><span class="line">callStack of thread: 8707</span><br><span class="line">libsystem_kernel.dylib         0x18022cc38 semaphore_wait_trap  +  8</span><br><span class="line">libdispatch.dylib              0x00003928 _dispatch_sema4_wait  +  28</span><br><span class="line">BaiduIphoneVideo               0x1026d2cd4 +[BaiduMobStatDeviceInfo testDeviceId]  +  56</span><br><span class="line">BaiduIphoneVideo               0x1026ca8a4 -[BaiduMobStatLogManager checkHeaderBeforeSendLog:]  +  3384</span><br><span class="line">BaiduIphoneVideo               0x1026cefdc -[BaiduMobStatLogManager _syncSendAllLog]  +  536</span><br><span class="line">BaiduIphoneVideo               0x1026c6398 __33-[BaiduMobStatController sendLog]_block_invoke  +  56</span><br><span class="line">libdispatch.dylib              0x00001dfc _dispatch_call_block_and_release  +  32</span><br><span class="line"></span><br><span class="line">... //省略中间线程堆栈</span><br><span class="line"></span><br><span class="line">callStack of thread: 80387</span><br><span class="line">libsystem_kernel.dylib         0x18024ea60 __open_nocancel  +  8</span><br><span class="line">libsystem_kernel.dylib         0x1802356e0 open$NOCANCEL  +  20</span><br><span class="line">BaiduIphoneVideo               0x101dcd488 -[XXXX脱敏🤣处理（去掉真实类名）XXXX recursiveCalculateAtPath:isAbnormal:isOutdated:needCheckIgnorePath:]  +  1360</span><br><span class="line">BaiduIphoneVideo               0x101dcd488 -[XXXX脱敏🤣处理（去掉真实类名）XXXX recursiveCalculateAtPath:isAbnormal:isOutdated:needCheckIgnorePath:]  +  1360</span><br><span class="line">BaiduIphoneVideo               0x101dcd488 -[XXXX脱敏🤣处理（去掉真实类名）XXXX recursiveCalculateAtPath:isAbnormal:isOutdated:needCheckIgnorePath:]  +  1360</span><br><span class="line">BaiduIphoneVideo               0x101dccd90 -[XXXX脱敏🤣处理（去掉真实类名）XXXX initWithOutdatedDays:abnormalFolderSize:abnormalFolderFileNumber:ignoreRelativePathes:checkSparseFile:sparseFileLeastDifferPercentage:sparseFileLeastDifferSize:visitors:]  +  576</span><br><span class="line">BaiduIphoneVideo               0x101dcd274 +[XXXX脱敏🤣处理（去掉真实类名）XXXX folderSizeAtPath:]  +  72</span><br><span class="line">BaiduIphoneVideo               0x101de3900 __56-[HMDToBCrashTracker(Environment) environmentInfoUpdate]_block_invoke_2  +  88</span><br><span class="line">libdispatch.dylib              0x00001dfc _dispatch_call_block_and_release  +  32</span><br><span class="line"></span><br><span class="line">👆👆👆👆👆👆👆堆栈👆👆👆👆👆👆👆</span><br></pre></td></tr></table></figure></p>
+<h1 id="开发起因"><a href="#开发起因" class="headerlink" title="开发起因"></a>开发起因</h1><p>有一定iOS开发基础的，应该都知道不合理创建线程，是会造成性能问题的。而业务的积累和迭代过程，可能就不可避免造成子线程过多或线程爆炸等问题。所以我们需要一个工具来监控子线程过多或线程爆炸等问题。网上没有找到这样的工具，只好自己动手了~ </p>
+<h1 id="不合理创建-使用线程造成的问题"><a href="#不合理创建-使用线程造成的问题" class="headerlink" title="不合理创建/使用线程造成的问题"></a>不合理创建/使用线程造成的问题</h1><p>合理使用多线程，将耗时操作放到子线程，可以提高App的流畅。但是如果不加控制创建子线程，造成线程爆炸，会造成性能问题。不合理使用线程有如下问题：</p>
+<ol>
+<li>创建子线程过多，是会造成性能问题的，因为创建线程需要占用内存空间（默认的情况下，主线程占1M,子线程占用512KB）。</li>
+<li>不合理创建和使用线程，容易引发数据一致性（线程安全）和死锁问题。</li>
+</ol>
+<p>所以我们要合理使用线程，将整个App的子线程数量控制在合理的范围内。如何合理使用，不是本文的讨论范围；本文介绍如何发现整个App线程数量过多和线程爆炸问题。</p>
+<h1 id="核心逻辑"><a href="#核心逻辑" class="headerlink" title="核心逻辑"></a>核心逻辑</h1><p>具体实现逻辑不到100行，非常简单。 大家可以下载代码  <a href="https://github.com/maniackk/KKThreadMonitor" target="_blank" rel="noopener">KKThreadMonitor</a> 研究。我讲下核心逻辑：</p>
+<h2 id="如何获取线程数量"><a href="#如何获取线程数量" class="headerlink" title="如何获取线程数量"></a>如何获取线程数量</h2><p>task_threads可以获取到整个App的线程数量。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">kern_return_t task_threads</span><br><span class="line">(</span><br><span class="line">	task_inspect_t target_task,</span><br><span class="line">	thread_act_array_t *act_list,</span><br><span class="line">	mach_msg_type_number_t *act_listCnt</span><br><span class="line">);</span><br></pre></td></tr></table></figure></p>
+<p>最开始，我是想通过计时器定时调用task_threads函数，来获取线程数量和增长速度。确实可以通过这个方式来做，但是间隔多久调用（涉及精度），大量调用这个函数的性能问题等，都表明这不是一个好的方案。</p>
+<p>很明显，如果我们知道了线程的创建函数跟销毁函数，通过hook这两个函数，是不是就可以实时获取到线程数量了。幸运的是，系统提供了这个函数：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">//在#include &lt;pthread/introspection.h&gt;文件里</span><br><span class="line"></span><br><span class="line">/**</span><br><span class="line">定义函数指针：pthread_introspection_hook_t</span><br><span class="line">event  : 线程处于的生命周期（下面枚举了线程的4个生命周期）</span><br><span class="line">thread ：线程</span><br><span class="line">addr   ：线程栈内存基址</span><br><span class="line">size   ：线程栈内存可用大小</span><br><span class="line">*/</span><br><span class="line">typedef void (*pthread_introspection_hook_t)(unsigned int event,</span><br><span class="line">		pthread_t thread, void *addr, size_t size);</span><br><span class="line">		</span><br><span class="line">enum &#123;</span><br><span class="line">	PTHREAD_INTROSPECTION_THREAD_CREATE = 1, //创建线程</span><br><span class="line">	PTHREAD_INTROSPECTION_THREAD_START, // 线程开始运行</span><br><span class="line">	PTHREAD_INTROSPECTION_THREAD_TERMINATE,  //线程运行终止</span><br><span class="line">	PTHREAD_INTROSPECTION_THREAD_DESTROY, //销毁线程</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">/**</span><br><span class="line">看这个函数名，很像我们平时hook函数一样的。</span><br><span class="line">返回值是上面声明的pthread_introspection_hook_t函数指针：返回原线程生命周期函数。</span><br><span class="line">参数也是函数指针：传入的是我们自定义的线程生命周期函数</span><br><span class="line">*/</span><br><span class="line">__attribute__((__nonnull__, __warn_unused_result__))</span><br><span class="line">extern pthread_introspection_hook_t</span><br><span class="line">pthread_introspection_hook_install(pthread_introspection_hook_t hook);</span><br></pre></td></tr></table></figure>
+<p>所以我们可以通过”hook”线程生命周期函数，来获得线程的新建跟销毁。</p>
+<h2 id="用锁保证线程安全"><a href="#用锁保证线程安全" class="headerlink" title="用锁保证线程安全"></a>用锁保证线程安全</h2><p>调用startMonitor函数，开始监控线程数量。在这个函数里用global_semaphore来保证，task_threads获取的线程数量，到hook完成，线程数量不会变化（加解锁之间，没有线程新建跟销毁）。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">+ (void)startMonitor</span><br><span class="line">&#123;</span><br><span class="line">    global_semaphore = dispatch_semaphore_create(1);</span><br><span class="line">    dispatch_semaphore_wait(global_semaphore, DISPATCH_TIME_FOREVER);</span><br><span class="line">    mach_msg_type_number_t count;</span><br><span class="line">    thread_act_array_t threads;</span><br><span class="line">    task_threads(mach_task_self(), &amp;threads, &amp;count);</span><br><span class="line">    threadCount = count; //加解锁之间，保证线程的数量不变</span><br><span class="line">    old_pthread_introspection_hook_t = pthread_introspection_hook_install(kk_pthread_introspection_hook_t);</span><br><span class="line">    dispatch_semaphore_signal(global_semaphore);</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h2 id="通过线程状态改变，来改变线程数量"><a href="#通过线程状态改变，来改变线程数量" class="headerlink" title="通过线程状态改变，来改变线程数量"></a>通过线程状态改变，来改变线程数量</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">//定时器每一秒都将线程增长数置0</span><br><span class="line">+ (void)clearThreadCountIncrease</span><br><span class="line">&#123;</span><br><span class="line">    threadCountIncrease = 0;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">void kk_pthread_introspection_hook_t(unsigned int event,</span><br><span class="line">pthread_t thread, void *addr, size_t size)</span><br><span class="line">&#123;</span><br><span class="line">    ...</span><br><span class="line">    //创建线程，则线程数量和线程增长数都加1</span><br><span class="line">    if (event == PTHREAD_INTROSPECTION_THREAD_CREATE) &#123;</span><br><span class="line">        threadCount = threadCount + 1;</span><br><span class="line">        ...</span><br><span class="line">        threadCountIncrease = threadCountIncrease + 1;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">    //销毁线程，则线程数量和线程增长数都加1</span><br><span class="line">    else if (event == PTHREAD_INTROSPECTION_THREAD_DESTROY)&#123;</span><br><span class="line">        threadCount = threadCount - 1;</span><br><span class="line">        ...</span><br><span class="line">        if (threadCountIncrease &gt; 0) &#123;</span><br><span class="line">            threadCountIncrease = threadCountIncrease - 1;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="打印所有线程堆栈"><a href="#打印所有线程堆栈" class="headerlink" title="打印所有线程堆栈"></a>打印所有线程堆栈</h1><p>这里我是用自己另外一个库<a href="https://github.com/maniackk/KKCallStack" target="_blank" rel="noopener">KKCallStack</a>。  </p>
+<p>如何打印线程堆栈，保留调用现场的博客很多，原理都是：回溯栈帧，获得函数调用地址，然后通过<a href="https://juejin.im/post/5d5275b251882505417927b5" target="_blank" rel="noopener">解析MachO文件</a>获得函数名。具体过程可以参考其它博客~</p>
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ol>
+<li><a href="https://github.com/kstenerud/KSCrash" target="_blank" rel="noopener">https://github.com/kstenerud/KSCrash</a></li>
+<li><a href="https://wereadteam.github.io/2016/05/03/WeRead-Performance/" target="_blank" rel="noopener">https://wereadteam.github.io/2016/05/03/WeRead-Performance/</a></li>
+<li><a href="https://juejin.im/post/5cce3a83e51d456e3428c1b1" target="_blank" rel="noopener">https://juejin.im/post/5cce3a83e51d456e3428c1b1</a></li>
+</ol>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="https://wukaikai.tech/2020/04/13/iOS线程数量监控工具/" data-title="iOS线程数量监控工具 | 吴凯凯的博客" data-tsina class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2020/03/28/静态插桩的方式来实现Hook-Method/" title="静态插桩的方式来实现Hook Method">
+ <strong>下一篇：</strong><br> 
+ <span>静态插桩的方式来实现Hook Method
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#开发起因"><span class="toc-number">1.</span> <span class="toc-text">开发起因</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#不合理创建-使用线程造成的问题"><span class="toc-number">2.</span> <span class="toc-text">不合理创建/使用线程造成的问题</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#核心逻辑"><span class="toc-number">3.</span> <span class="toc-text">核心逻辑</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#如何获取线程数量"><span class="toc-number">3.1.</span> <span class="toc-text">如何获取线程数量</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#用锁保证线程安全"><span class="toc-number">3.2.</span> <span class="toc-text">用锁保证线程安全</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#通过线程状态改变，来改变线程数量"><span class="toc-number">3.3.</span> <span class="toc-text">通过线程状态改变，来改变线程数量</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#打印所有线程堆栈"><span class="toc-number">4.</span> <span class="toc-text">打印所有线程堆栈</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#参考"><span class="toc-number">5.</span> <span class="toc-text">参考</span></a></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+
+
+  
+
+  
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/tags/iOS程序员的自我修养/" title="iOS程序员的自我修养">iOS程序员的自我修养<sup>6</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/笔记/" title="笔记">笔记<sup>1</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="https://juejin.im/user/5aaf755cf265da23870ea3cf" target="_blank" title="我的掘金主页">我的掘金主页</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="https://github.com/maniackk" target="_blank" title="我的github">我的github</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="https://www.jianshu.com/u/8aabf950cf74" target="_blank" title="我的简书主页">我的简书主页</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="https://liuyan.tech" target="_blank" title="小胖子">小胖子</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer">
+	
+	
+	<div class="social-font">
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2020 
+		
+		<a href="/about" target="_blank" title="吴凯凯">吴凯凯</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/jquery.qrcode-0.12.0.min.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<div class="hoverqrcode clearfix"></div>',
+  '<a class="overlay" id="qrcode"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+
+  $('.hoverqrcode').hide();
+
+  var myWidth = 0;
+  function updatehoverqrcode(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+    var qrsize = myWidth > 1024 ? 200:100;
+    var options = {render: 'image', size: qrsize, fill: '#2ca6cb', text: url, radius: 0.5, quiet: 1};
+    var p = $('.article-share-qrcode').position();
+    $('.hoverqrcode').empty().css('width', qrsize).css('height', qrsize)
+                          .css('left', p.left-qrsize/2+20).css('top', p.top-qrsize-10)
+                          .qrcode(options);
+  };
+  $(window).resize(function(){
+    $('.hoverqrcode').hide();
+  });
+  $('.article-share-qrcode').click(function(){
+    updatehoverqrcode();
+    $('.hoverqrcode').toggle();
+  });
+  $('.article-share-qrcode').hover(function(){}, function(){
+      $('.hoverqrcode').hide();
+  });
+});   
+</script>
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>
